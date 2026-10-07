@@ -347,23 +347,20 @@ export async function webauthnAuthenticate(user) {
 
   console.log('[FIDO2 Auth] Starting authentication for user:', user);
 
-  // Build allowCredentials from stored enrollment marker
-  const allowCredentials = [];
-  const marker = localStorage.getItem(ENROLLMENT_MARKER_PREFIX + user);
-  if (marker) {
-    try {
-      const { id } = JSON.parse(marker);
-      if (id) allowCredentials.push({ id: base64urlToBuffer(id), type: 'public-key', transports: ['usb'] });
-    } catch (_) {}
-  }
-
+  // Always an open query: an empty allowCredentials list, so the key answers
+  // with whatever discoverable credential it holds and we learn who it is from
+  // the userHandle. No credential ID is needed, and with no ID there is no
+  // transports hint to steer the phone towards USB only -- the browser offers
+  // NFC and USB alike. hints routes Android Chrome 128+ straight to the
+  // security-key sheet instead of its passkey picker.
   try {
     const assertion = await navigator.credentials.get({
       publicKey: {
         challenge,
         rpId: location.hostname,
-        allowCredentials,
+        allowCredentials: [],
         userVerification: 'discouraged',
+        hints: ['security-key'],
         timeout: 60000
       }
     });

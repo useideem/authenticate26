@@ -27,7 +27,8 @@
 /** Upstream user API. Override with the DB_API environment variable. */
 const DB_API = process.env.DB_API || 'https://sbit.authconcepts.com:3033/api';
 
-const ALLOWED_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE'];
+// PATCH is the balance endpoint (/users/:id/balance, /users/phone/:phone/balance).
+const ALLOWED_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
 export default {
   async fetch(request) {

@@ -39,6 +39,7 @@ been null in every record so far, so its format is still unknown.
 | GET | `/users/phone/:phone` | an **array**, one element per match |
 | PUT | `/users/:id`, `/users/phone/:phone` | 200 and the updated record |
 | DELETE | `/users/:id`, `/users/phone/:phone` | `{"message":"User deleted","user":{…}}` |
+| PATCH | `/users/:id/balance`, `/users/phone/:phone/balance` | `{"message":"Balance updated","user":{…}}` -- see §3a |
 
 A missing record gives `404 {"error":"User not found"}`. An unknown route
 gives Express's HTML error page, not JSON.
@@ -65,6 +66,39 @@ records with different `userId`s. Nothing on the server prevents it, so
 **There is no authentication.** No key, no token, no session. Anyone who knows
 the URL can read, edit and delete every record, `balance` included. Fine for a
 booth demo with invented data; do not put anything real in it.
+
+## 3a. The balance endpoint
+
+`PATCH /users/:id/balance` or `/users/phone/:phone/balance` with a body of
+`{"amount": 500.00}`. Measured on 2026-10-02 against a throwaway record that
+started at 1000:
+
+| Sent | Result |
+|---|---|
+| `500.00` by id | 200, balance **1500** -- the amount is **added** |
+| `-200` by phone | 200, balance 1300 -- a negative amount subtracts |
+| `12.345` | 200, balance 1312.35 -- the result is rounded to cents |
+| `"50"` (a string) | 200, balance 1362.35 -- numeric strings are accepted |
+| `0` | 200, balance unchanged |
+| body `{}` | **400** `{"error":"A valid numeric amount is required"}` |
+| `-999999` | 200, balance **-998636.65** -- nothing stops an overdraft |
+| unknown id or phone | 404 `{"error":"User not found"}` |
+
+So it is a ledger adjustment, not a setter: to charge somebody, send a negative
+amount; to set an exact balance, use PUT with the full record (§3). Two
+consequences for the demo:
+
+- **The page has to refuse an overdraft itself.** The API will happily take a
+  balance below zero, so if a payment must fail when funds are short, check the
+  balance first and decide on the client side.
+- **A retried request applies twice.** Each PATCH adds again, and there is no
+  idempotency key, so a timeout followed by a retry can charge twice. Do not
+  auto-retry a PATCH; re-read the balance instead.
+
+The by-phone form is subject to the same exact-string match as every other
+phone route, and with duplicate phone numbers possible (§3) it is not clear
+which record a by-phone PATCH adjusts. Prefer the by-id form once the user has
+been looked up.
 
 ## 4. CORS, and why the proxy exists
 

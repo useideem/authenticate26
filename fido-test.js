@@ -120,7 +120,7 @@ function toDescriptor(saved) {
   return {
     type: 'public-key',
     id: base64urlToBuffer(saved.id),
-    transports: saved.transports?.length ? saved.transports : ['usb']
+    transports: saved.transports?.length ? saved.transports : ['usb', 'nfc']
   };
 }
 
